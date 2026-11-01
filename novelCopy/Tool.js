@@ -23,6 +23,7 @@
 // @match        https://www.bikuxs.com/*
 // @match        https://www.baishuwu.com/*
 // @match        https://m.22shuqu.net/*
+// @match        https://www.piaotianapp.com/*
 // @require      http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js
 // @grant        GM_addStyle
 // @run-at       document-start
@@ -37,7 +38,7 @@
 
     /*
      * 可以抓取的网址
-     * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu yuzhengong bikuxs baishuwu 22shuqu
+     * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu yuzhengong bikuxs baishuwu 22shuqu piaotianapp
      */
     let websiteObj = [
         {
@@ -130,15 +131,22 @@
         },
         {
             index: 12,
-            url: " https://www.baishuwu.com/",
+            url: "https://www.baishuwu.com/",
             sign: "baishuwu",
             title: "",
             article: "",
             describe: ``,
         }, {
             index: 13, // 3
-            url: " https://www.22shuqu.com/",
+            url: "https://www.22shuqu.com/",
             sign: "22shuqu",
+            title: "",
+            article: "",
+            describe: ``,
+        }, {
+            index: 14,
+            url: "https://www.piaotianapp.com",
+            sign: "piaotianapp",
             title: "",
             article: "",
             describe: ``,
@@ -326,7 +334,7 @@
         }
     }
 
-    /*
+    /**
      * 校验是否可以复制此网站
      * 不能校验返回0，其他返回序号
      */
@@ -347,7 +355,7 @@
         return result;
     }
 
-    /*
+    /**
      * 获取文本内容
      * index 网站序号
      * isCheck 是否校验网页是否加载完整
@@ -554,9 +562,27 @@
                     over = true;
                 }
                 break;
+            case 14: // piaotianapp
+                // 不按网页每页顶部的标题来做目录，按正文内出现的章节来做目录
+                a = $('#content').text()
+                    .replaceAll('\n', '\n\n')
+                    .replaceAll('&amp;nbsp;&amp;nbsp;', '')
+                    .replace('沒有了', '')
+                    .replace('上一頁', '')
+                    .replace('下一章', '')
+                    .replace('上一章', '')
+                    .replace('下一頁', '')
+                    .replace('舉報本章錯誤( 無需登錄 ) ', '').trim();
+
+                str = matchChapter(a + '\n\n').replace(/\n{3,}/g, "\n\n");
+                over = false;
+                if (!isCheck) {
+                    over = true;
+                }
+                break;
 
             //  case 9:
-            //   break; 
+            //   break;
             default: // 基础的通过标签id或者class类名获取章节内容
                 if (websiteObj[index - 1].title.includes("#")) {
                     a = $(websiteObj[index - 1].title).innerText;
@@ -585,7 +611,7 @@
         return str;
     }
 
-    /*
+    /**
      * 复制到剪贴板
      * 非重复的章节会存储到localStorage里
      * copyContent('这里表示想要复制的内容');
@@ -623,7 +649,7 @@
         document.body.removeChild(transfer);
     }
 
-    /*
+    /**
      * 弹窗提示信息
      * showNotification('复制成功');
      */
@@ -643,7 +669,7 @@
         }, duration);
     }
 
-    /*
+    /**
      * 下一章
      */
     function turnPage(index) {
@@ -710,6 +736,9 @@
             case 13: // 22shuqu
                 $("#pt_next")[0].click();
                 break;
+            case 14: // piaotianapp
+                $('.m-tpage li')[1].childNodes[0].click();
+                break;
 
             // case 9:
             //   break;
@@ -723,7 +752,7 @@
         }
     }
 
-    /*
+    /**
      * 匹配章节 如：第1章、第一章
      * 改成标准目录格式头：_目录_  【 第1章 】
      * TODO 中文章节大于一百有问题！
