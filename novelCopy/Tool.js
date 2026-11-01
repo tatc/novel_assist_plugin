@@ -14,6 +14,7 @@
 // @match        https://www.po18yu.vip/*
 // @match        https://www.dingdianwang.net/*
 // @match        https://m.fushuw.org/*
+// @match        https://www.fushuw.org/*
 // @match        https://m.fushutxt.org/*
 // @match        https://m.blxsw.cc/*
 // @match        https://m.fushutxt.cc/*
@@ -29,6 +30,8 @@
 // @match        http://www.yimixs.org/*
 // @match        https://www.nidedizhi1.com/*
 // @match        https://ganjv.com/*
+// @match        https://www.tmwk.cc/*
+// @match        https://www.jcxs.cc/*
 // @require      http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js
 // @grant        GM_addStyle
 // @run-at       document-start
@@ -43,7 +46,8 @@
 
     /*
      * 可以抓取的网址
-     * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu yuzhengong bikuxs baishuwu 22shuqu piaotianapp vipsalary yimixs nidedizhi1 ganjv
+     * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu yuzhengong bikuxs
+     baishuwu 22shuqu piaotianapp vipsalary yimixs nidedizhi1 ganjv tmwk jcxs
      */
     let websiteObj = [
         {
@@ -78,7 +82,7 @@
         },
         {
             index: 5,
-            url: "https://www.dameishuwang.net/",
+            url: ["https://www.dameishuwang.net/", "https://www.tmwk.cc/"],
             sign: "dameishuwang",
             title: "",
             article: "",
@@ -102,8 +106,11 @@
             index: 8,
             url: [
                 "https://m.fushutxt.org/",
+                "https://www.fushutxt.org/",
                 "https://m.fushutxt.cc/",
+                "https://www.fushutxt.cc/",
                 "https://m.fushuw.org/",
+                "https://www.fushuw.org/",
                 "https://m.blxsw.cc/",
             ],
             sign: "fushu",
@@ -184,6 +191,15 @@
             sign: "ganjv",
             title: "",
             article: "",
+            turn: "",
+            describe: ``,
+        },
+        {
+            index: 19,
+            url: "https://www.jcxs.cc/",
+            sign: "jcxs",
+            title: ".novel",
+            article: ".yd_text2",
             turn: "",
             describe: ``,
         },
@@ -499,7 +515,7 @@
                 a = $(".book h1").text();
                 b = $(".readcontent")[0]
                     .innerText.replace("本章未完，点击下一页继续阅读", `\n`)
-                    .replace(`<br />`, `\n`);
+                    .replace(`<br />`, `\n`).replaceAll('    ', '\t').trim();
                 str = matchChapter(b);
                 over = false;
                 if (!isCheck) {
@@ -508,10 +524,11 @@
                 break;
             case 6: // 52shuku
                 // 不按网页每页顶部的标题来做目录，按正文内出现的章节来做目录
-                a = $("#nr1").text().replace(`<br />`, `\n`);
+                a = $("#nr1").text().replace(`<br />`, `\n`)
+                    .replace(`window.pubfuturetag = window.pubfuturetag || [];window.pubfuturetag.push({unit: '68f61475d1f53e4710bfd6f1', id: 'pf-16922-1'})`, '');
                 b = matchChapter(a);
                 str = b.slice(0, b.indexOf("目录 上一页 下一页 尾页")).trimStart();
-                str = "\n\n　　" + str.replaceAll("　　", "\n\n　　");
+                str = "\n\n　　" + str.replaceAll("　　", "\n\n　　").replace(/\n{3,}/g, "\n\n");
                 over = false;
                 if (!isCheck) {
                     over = true;
@@ -526,6 +543,8 @@
                     str = b.slice(0, b.indexOf("耽美小说 www")).trimStart();
                 } else if (b.includes("自愿捐助网站")) {
                     str = b.slice(0, b.indexOf("自愿捐助网站")).trimStart();
+                } else if (b.includes("福书网：")) {
+                    str = b.slice(0, b.indexOf("福书网：")).trimStart();
                 }
                 str = "\n\n　　" + str.replaceAll("　　", "\n\n　　");
                 over = false;
@@ -708,7 +727,18 @@
                 let title = $('.title h1')[0].innerText.split(' ');
                 a = title[title.length - 1];
                 b = $('#chaptercontent')[0].innerText;
-                str = "\n _目录_  【 " + a.trim() + " 】" + "\n\n" + b;
+                str = "\n _目录_  【 " + a.trim() + " 】" + "\n\n" + matchChapter(b);
+
+                over = false;
+                if (!isCheck) {
+                    over = true;
+                }
+                break;
+            case 19: // jcxs
+                a = $('.novel h1')[0].innerText;
+                // b = $('.yd_text2')[0].innerText;
+                b = $('.yd_text2')[0].innerHTML.replaceAll("&nbsp;&nbsp;&nbsp;&nbsp;", "\n\n").replace(/^/gm, "　　");
+                str = "\n _目录_  【 " + a.trim() + " 】" + "\n" + b;
 
                 over = false;
                 if (!isCheck) {
@@ -736,7 +766,7 @@
                 if (b[0] != "") {
                     b = "\n\n\n" + b;
                 }
-                str = " _目录_  【 " + a.trim() + " 】" + b;
+                str = " _目录_  【 " + a.trim() + " 】" + htmlToPlainTextForNotepad(b);
                 over = false;
                 if (!isCheck) {
                     over = true;
@@ -908,6 +938,8 @@
             case 18: // ganjv
                 $(".last a")[0].click();
                 break;
+            case 19: // jcxs
+                $(".pereview a")[2].click();
 
             // case 9:
             //   break;
