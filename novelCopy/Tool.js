@@ -19,6 +19,7 @@
 // @match        https://m.fushutxt.cc/*
 // @match        http://m.yuzhengong.com/*
 // @match        https://www.52shuku.net/*
+// @match        https://shubaowb.com/*
 // @require      http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js
 // @grant        GM_addStyle
 // @run-at       document-start
@@ -32,9 +33,9 @@
     'use strict';
 
     /*
-  * 可以抓取的网址
-  * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu
-  */
+    * 可以抓取的网址
+    * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu
+    */
     let websiteObj = [
         {
             index: 1,
@@ -94,19 +95,19 @@
             title: '',
             article: ''
         },
-        /*     {
-      index: 9,
-      url: '',
-      sign: '',
-      title: '',
-      article: '',
-      turn: ''
-    } */
+        {
+            index: 9,
+            url: 'https://shubaowb.com/',
+            sign: 'shubaowb',
+            title: '.title1',
+            article: '#chaptercontent',
+            turn: '#pb_next'
+        }
     ];
     let over = true; // 可以翻页
 
 
-    console.log(checkout() ? 'btn show' : 'btn hidden');
+    console.log(checkout() ? 'btn show' : 'btn hidden', judgeInfoPage());
 
     // showNotification(judgeInfoPage(),2000,false); // 判断是列表页还是正文页
 
@@ -122,19 +123,13 @@
     }
 
     function judgeInfoPage() {
-        // #chaptercontent
-        // http://m.yuzhengong.com/
-        // http://m.yuzhengong.com/html/246580/    // http://m.yuzhengong.com/html/135956/index_2.html
-        // http://m.yuzhengong.com/html/246580/212983.html   // http://m.yuzhengong.com/html/135956/75869.html
-        // http://m.yuzhengong.com/html/246580/212983_2.html
-        // https://m.fushuw.org/GLbaihe/  https://m.fushuw.org/GLbaihe/index_1.html
-        // http://m.yuzhengong.com/html/37450/index_4.html
         let hostname = window.location.hostname;
         let pathname = window.location.pathname;
+        // 根据网页标签名称判断
         if (pathname && pathname.at(-1) == '/' || pathname.includes('index_') || document.title.includes('最新章节')) {
             return 'listPage';
         }
-        console.log(checkout(), document.title)
+        // 根据页面元素判断
         return 'infoPage';
     }
 
@@ -198,9 +193,8 @@
         let message = '';
         Object.keys(localStorage).forEach(key => {
             // message=message+'<p>'+key+'</p>';
-            message = message + `
-              <p>${key}：${localStorage[key].slice(0, 20)}</p>
-            `;
+            message = message + `<p>
+              ${key}：${localStorage[key].slice(0, 20)}</p>`;
         });
 
         // 创建遮罩层
@@ -217,6 +211,9 @@
 
         modal.innerHTML = `
         <input id="is_save" type="checkbox" checked>
+        <p>
+            <button id="novel_copy">novel copy</button>
+        </p>
         <div>${message}</div>
         <br />
         <button id="modal_close_btn">关闭</button>
@@ -237,21 +234,24 @@
                 overlay.remove();
                 document.body.style.overflow = ""; // 恢复页面滚动
             }
-            // 翻页按钮是否保存本页
+            // 翻页按钮是否保存本页 TODO
             if (e.target === document.getElementById("is_save")) {
                 console.log(e.target.checked)
             }
-        });
+            // 复制全文
+            if (e.target === document.getElementById("novel_copy")) {
+                if (localStorage.getItem('test')) {
+                    navigator.clipboard.writeText(localStorage.getItem('test')).then(() => { showNotification('复制全文'); }).catch(err => { console.error('novel_copy 复制失败', err); });
+                }
+            }
 
+        });
     }
 
     function clearStorage() {
-        console.log('clear');
         localStorage.removeItem('test');
         document.getElementById('btn_clear_novel').innerText = 'n';
     }
-
-
 
 
     function init() {
@@ -406,7 +406,11 @@
             /*       case 9:
       break; */
             default: // 基础的通过标签id或者class类名获取章节内容
-                a = $(websiteObj[index - 1].title).innerText;
+                if (websiteObj[index - 1].title.includes('#')) {
+                    a = $(websiteObj[index - 1].title).innerText;
+                } else {
+                    a = $(websiteObj[index - 1].title)[0].innerText;
+                }
                 if ($(websiteObj[index - 1].article).innerText) {
                     b = $(websiteObj[index - 1].article).innerText.replace('    ', '\n   ').replace('<br>', '\n   ');
                 } else {
@@ -531,7 +535,11 @@
             /*       case 9:
       break; */
             default: // 基础的通过标签id或者class类名获取章节内容
-                $(websiteObj[index - 1].turn).click();
+                if ($(websiteObj[index - 1].turn)[0]) {
+                    $(websiteObj[index - 1].turn)[0].click();
+                } else {
+                    $(websiteObj[index - 1].turn).click();
+                }
                 break;
         }
     }
@@ -561,7 +569,11 @@
   */
     function judgeRepeat(text = '') {
         let con = localStorage.getItem('test');
-        if (con && con.slice(con.length - 15, con.length).includes(text.slice(text.length - 15, text.length))) {
+        if (con) {
+            con = con.trim();
+        }
+        text = text.trim();
+        if (con && con.slice(con.length - 150, con.length).includes(text.slice(text.length - 150, text.length))) {
             return true;
         }
         return false;
