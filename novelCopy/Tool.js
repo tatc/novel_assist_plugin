@@ -10,7 +10,7 @@
 // @match        https://www.po18r.com/*
 // @match        https://m.rourouwu.de/*
 // @match        https://m.wodeshubao.org/*
-// @match        https://www.dameishuwang.net//*
+// @match        https://www.dameishuwang.net/*
 // @match        https://www.po18yu.vip/*
 // @match        https://www.dingdianwang.net/*
 // @match        https://m.fushuw.org/*
@@ -26,6 +26,8 @@
 // @match        https://www.piaotianapp.com/*
 // @match        https://www.vipsalary.com/*
 // @match        http://m.yimixs.org/*
+// @match        http://www.yimixs.org/*
+// @match        https://www.nidedizhi1.com/*
 // @require      http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js
 // @grant        GM_addStyle
 // @run-at       document-start
@@ -161,12 +163,21 @@
             describe: ``,
         }, {
             index: 16,
-            url: "http://m.yimixs.org/",
+            url: ["http://m.yimixs.org/", "http://www.yimixs.org/"],
             sign: "yimixs",
             title: "",
             article: "",
             describe: ``,
+        }, {
+            index: 17, // 1
+            url: "https://www.nidedizhi1.com",
+            sign: "nidedizhi1",
+            title: "",
+            article: "",
+            turn: "",
+            describe: ``,
         },
+
     ];
     /**
      * 是否可以翻页
@@ -640,13 +651,48 @@
                 }
                 break;
             case 16: // yimixs
-                a = $(".headline")[0].innerText;
-                b = $("#txt")[0].innerText.replace("「如章节缺失请退#出#阅#读#模#式」", "\n   ").replace(/^/gm, "　　");
+                if (location.hostname.indexOf('m') == 0) {
+                    a = $(".headline")[0].innerText;
+                    b = $("#txt")[0].innerText.replace("「如章节缺失请退#出#阅#读#模#式」", "\n   ").replace(/^/gm, "　　");
+                } else {
+                    a = $("h1")[0].innerText;
+                    b = $(".article-body")[0].innerText.replace("「如章节缺失请退#出#阅#读#模#式」", "\n   ").replace(/^/gm, "　　");
+                }
                 str = " _目录_  【 " + a.trim() + " 】" + matchChapter(b);
                 over = false;
                 if (!isCheck) {
                     over = true;
                 }
+                break;
+            case 17: // nidedizhi1
+                a = $("#chaptertitle").text();
+                b = "";
+                over = false;
+                $(".articlecontent p").each((i, e) => {
+                    let text = e.innerText.replaceAll("&esp;", "").trim();
+                    if (
+                        text.length > 0 &&
+                        !text.includes("本章尚未完结") &&
+                        !text.includes("本章已阅读完毕")
+                    ) {
+                        b = b + "    " + text + "\n\n";
+                    }
+                    if (
+                        text.includes("本章已阅读完毕") ||
+                        text.includes("本章尚未完结") ||
+                        !isCheck
+                    ) {
+                        over = true;
+                    }
+                });
+
+                if (a.match(/(第\s*)([\u4e00-\u9fa5a-zA-Z0-9]{1,7})\s*[章页]/g)) {
+                    b = matchChapter(b);
+                } else {
+                    str = " _目录_  【 " + a + " 】 \n\n";
+                }
+
+                str += b;
                 break;
 
             //  case 9:
@@ -825,11 +871,18 @@
                 $('.read_btn a')[3].click();
                 break;
             case 16: // yimixs
-                if ($('.pager')[0].childNodes[5].childNodes[3]) {
-                    $('.pager')[0].childNodes[5].childNodes[3].click();
+                if (location.hostname.indexOf('m') == 0) {
+                    if ($('.pager')[0].childNodes[5].childNodes[3]) {
+                        $('.pager')[0].childNodes[5].childNodes[3].click();
+                    } else {
+                        $('.pager')[0].childNodes[5].click();
+                    }
                 } else {
-                    $('.pager')[0].childNodes[5].click();
+                    $('.article-page-next')[0].click();
                 }
+                break;
+            case 17: // nidedizhi1
+                $(".novelbutton li a")[3].click();
                 break;
 
             // case 9:
@@ -940,7 +993,7 @@
             return fir + "\n" + sec;
         }
 
-        return fir + "\n\n" + sec;
+        return "　　" + fir + "\n\n　　" + sec;
     }
 
     const synth = window.speechSynthesis; // 获取浏览器的SpeechSynthesis接口
