@@ -20,6 +20,9 @@
 // @match        http://m.yuzhengong.com/*
 // @match        https://www.52shuku.net/*
 // @match        https://shubaowb.com/*
+// @match        https://www.bikuxs.com/*
+// @match        https://www.baishuwu.com/*
+// @match        https://m.22shuqu.net/*
 // @require      http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js
 // @grant        GM_addStyle
 // @run-at       document-start
@@ -34,7 +37,7 @@
 
     /*
      * 可以抓取的网址
-     * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu yuzhengong
+     * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu yuzhengong bikuxs baishuwu 22shuqu
      */
     let websiteObj = [
         {
@@ -44,6 +47,7 @@
             title: "",
             article: "",
             turn: "",
+            describe: ``,
         },
         {
             index: 2,
@@ -53,7 +57,7 @@
             article: "",
         },
         {
-            index: 3,
+            index: 3, // 13
             url: "https://m.rourouwu.de",
             sign: "rourouwu",
             title: "#nr_title",
@@ -115,6 +119,29 @@
             title: "",
             article: "",
             describe: `正文第一行可能是 第n节 (第n/m页) 也可能是 第n章 文章名 会有一章节不在同一页面的情况`,
+        },
+        {
+            index: 11,
+            url: "https://www.bikuxs.com/",
+            sign: "bikuxs",
+            title: "",
+            article: "",
+            describe: ``,
+        },
+        {
+            index: 12,
+            url: " https://www.baishuwu.com/",
+            sign: "baishuwu",
+            title: "",
+            article: "",
+            describe: ``,
+        }, {
+            index: 13, // 3
+            url: " https://www.22shuqu.com/",
+            sign: "22shuqu",
+            title: "",
+            article: "",
+            describe: ``,
         },
     ];
     let over = true; // 可以翻页
@@ -261,7 +288,7 @@
             }
             // 复制全文
             if (e.target === document.getElementById("novel_copy")) {
-                let novel = localStorage.getItem("test").replace(/\n+/g, "\n\n");
+                let novel = localStorage.getItem("test");
                 if (novel) {
                     if (window.location.protocol === "https:") {
                         navigator.clipboard
@@ -459,8 +486,6 @@
                     over = true;
                 }
                 break;
-            /*       case 9:
-      break; */
             case 10:
                 str = htmlToPlainTextForNotepad($('#chaptercontent')[0].innerHTML);
                 let matchArr = str.match(/第(\d+)节\s*\(第(\d+)\/(\d+)页\)/);
@@ -483,6 +508,55 @@
                     over = true;
                 }
                 break;
+            case 11: // bikuxs
+                // 不按网页每页顶部的标题来做目录，按正文内出现的章节来做目录
+                a = htmlToPlainTextForNotepad($("#content")[0].innerHTML);
+                str = matchChapter(a);
+                over = false;
+                if (!isCheck) {
+                    over = true;
+                }
+                break;
+            case 12: // baishuwu
+                $(".word_read p").each((i, e) => {
+                    let p = e.innerText.trim();
+                    if (i > 0) {
+                        str = str + "\n\n" + "    " + p;
+                    } else {
+                        let con = localStorage.getItem("test");
+                        if (con) {
+                            con = con.trim();
+                            if (!con.slice(con.length - p.length, con.length).includes(p)) {
+                                str = str + "    " + p;
+                            }
+                        } else {
+                            str = "\n\n\n    " + p;
+                        }
+
+                    }
+                });
+                str = matchChapter(str + "\n\n");
+                break;
+            case 13: // 22shuqu
+                a = $("#nr_title").text();
+                b = $("#nr1")[0].innerText.replace("    ", "\n   ").replace("由于不可抗拒原因，打不开请访问最新网址m.2shuqu.com", "").replace("【本章阅读完毕，; 】", "").replace(/^/gm, "　　");
+                str = " _目录_  【 " + a.trim() + " 】" + b;
+
+                let con = localStorage.getItem("test");
+                if (con) {
+                    con = con.trim();
+                    if (con.includes(a.trim())) {
+                        str = b;
+                    }
+                }
+                over = false;
+                if (!isCheck) {
+                    over = true;
+                }
+                break;
+
+            //  case 9:
+            //   break; 
             default: // 基础的通过标签id或者class类名获取章节内容
                 if (websiteObj[index - 1].title.includes("#")) {
                     a = $(websiteObj[index - 1].title).innerText;
@@ -627,8 +701,18 @@
             case 10:
                 $("#pb_next")[0].click();
                 break;
-            /*       case 9:
-      break; */
+            case 11: // bikuxs
+                $(".jump a")[2].click();
+                break;
+            case 12: // baishuwu
+                $(".read_btn a")[3].click();
+                break;
+            case 13: // 22shuqu
+                $("#pt_next")[0].click();
+                break;
+
+            // case 9:
+            //   break;
             default: // 基础的通过标签id或者class类名获取章节内容
                 if ($(websiteObj[index - 1].turn)[0]) {
                     $(websiteObj[index - 1].turn)[0].click();
@@ -653,7 +737,7 @@
             arr.map((e) => {
                 str = str
                     .replaceAll("【", "[")
-                    .replace("】", "]")
+                    .replaceAll("】", "]")
                     .replace(e, "\n\n\n  _目录_  【 " + e + " 】")
                     .replaceAll("_目录_  [", "_目录_  【")
                     .replaceAll("章 ]", "章 】");
@@ -785,13 +869,15 @@
         // 1. 替换 <br> 为换行
         let text = html.replace(/&nbsp;/gi, ' ').replace(/<br\s*\/?>/gi, "\n");
         // 2. 将 <p> 或 <div> 换成换行符
-        text = text.replace(/<\/?(p|div)[^>]*>/gi, "\n");
+        text = text.replace(/<\/?(p|div)[^>]*>/gi, "  \n");
         // 3. 去掉剩余 HTML 标签
         text = text.replace(/<\/?[^>]+(>|$)/g, "");
         // 4. 合并连续多个换行为两个（可选）
-        text = text.replace(/\n+/g, "\n\n");
+        text = text.replace(/\n{3,}/g, "\n\n");
         // 5. 去掉开头和结尾的空格和结尾的换行
         text = text.replace(/^\s+|\s+$/g, "");
+        // 6. 首行缩进（每一行前加两个全角空格）
+        text = text.replace(/^/gm, "　　");
         return text.trim();
     }
 
