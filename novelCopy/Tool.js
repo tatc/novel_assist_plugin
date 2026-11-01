@@ -24,6 +24,8 @@
 // @match        https://www.baishuwu.com/*
 // @match        https://m.22shuqu.net/*
 // @match        https://www.piaotianapp.com/*
+// @match        https://www.vipsalary.com/*
+// @match        http://m.yimixs.org/*
 // @require      http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js
 // @grant        GM_addStyle
 // @run-at       document-start
@@ -38,7 +40,7 @@
 
     /*
      * 可以抓取的网址
-     * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu yuzhengong bikuxs baishuwu 22shuqu piaotianapp
+     * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu yuzhengong bikuxs baishuwu 22shuqu piaotianapp vipsalary
      */
     let websiteObj = [
         {
@@ -150,9 +152,26 @@
             title: "",
             article: "",
             describe: ``,
+        }, {
+            index: 15,
+            url: "https://www.vipsalary.com",
+            sign: "vipsalary",
+            title: "",
+            article: "",
+            describe: ``,
+        }, {
+            index: 16,
+            url: "http://m.yimixs.org/",
+            sign: "yimixs",
+            title: "",
+            article: "",
+            describe: ``,
         },
     ];
-    let over = true; // 可以翻页
+    /**
+     * 是否可以翻页
+     */
+    let over = true;
 
     console.log(checkout() ? "btn show" : "btn hidden", judgeInfoPage());
 
@@ -199,7 +218,6 @@
         btn.textContent = "copy";
         btn.onclick = nextPage;
         document.documentElement.appendChild(btn);
-        console.log("addBtn");
     }
 
     function addBtnInfo() {
@@ -232,11 +250,10 @@
     }
 
     function nextPage() {
-        console.log("click");
         init();
     }
 
-    /*
+    /**
      * 展示缓存的内容列表
      * 设置是否保存
      */
@@ -300,7 +317,7 @@
                 if (novel) {
                     if (window.location.protocol === "https:") {
                         navigator.clipboard
-                            .writeText(novel)
+                            .writeText(novel) // .replace(/\n{3,}/g, "\n\n")
                             .then(() => {
                                 showNotification("复制全文");
                             })
@@ -357,8 +374,9 @@
 
     /**
      * 获取文本内容
-     * index 网站序号
-     * isCheck 是否校验网页是否加载完整
+     * @param {number} index 网站序号
+     * @param {boolean} isCheck 是否校验网页是否加载完整
+     * @returns {string} 获取网页文本内容
      */
     function getCopyText(index, isCheck = false) {
         let str = "",
@@ -525,7 +543,7 @@
                     over = true;
                 }
                 break;
-            case 12: // baishuwu
+            case 12: // baishuwu  TODO: 目录问题，有些正文没章节名，需要从每页顶部的标题提取章节名
                 $(".word_read p").each((i, e) => {
                     let p = e.innerText.trim();
                     if (i > 0) {
@@ -580,6 +598,56 @@
                     over = true;
                 }
                 break;
+            case 15: // vipsalary
+                // 判断标题是否存在
+                a = $(".word_read h3").text();
+
+                // 不按网页每页顶部的标题来做目录，按正文内出现的章节来做目录
+                let hasTitle = false;
+                let arr = a.match(/(第\s*)([\u4e00-\u9fa5a-zA-Z0-9]{1,7})\s*[章页]/g);
+                if (arr) {
+                    if (arr.length > 1 && arr[arr.length - 1].match(/第\d+页/g)) {
+                        let title = a.slice(a.indexOf(arr[0]) + arr[0].length, a.indexOf(arr[arr.length - 1]) - 1);
+                        if (title.length > 0) {
+                            // 直接用标题做目录
+                            hasTitle = true;
+                        }
+                    }
+                }
+
+                let stop = false;
+                $(".word_read p").each((i, p) => {
+                    // 去掉底部无关正文内容。
+                    let text = p.innerText.replaceAll("&rdquo;", "");
+                    if (text.includes('勿开启浏览器阅读模式，否则将导致章节内容缺失及无法阅读下一章。')) {
+                        // 停止继续获取字符，余下非正文字符
+                        stop = true;
+                    }
+                    if (!stop) {
+                        b = b + "    " + text + "\n\n";
+                    }
+                })
+
+                if (hasTitle) {
+                    str = " _目录_  【 " + a.trim() + " 】" + "\n\n" + b;
+                } else {
+                    str = matchChapter(b);
+                }
+
+                over = false;
+                if (!isCheck) {
+                    over = true;
+                }
+                break;
+            case 16: // yimixs
+                a = $(".headline")[0].innerText;
+                b = $("#txt")[0].innerText.replace("「如章节缺失请退#出#阅#读#模#式」", "\n   ").replace(/^/gm, "　　");
+                str = " _目录_  【 " + a.trim() + " 】" + matchChapter(b);
+                over = false;
+                if (!isCheck) {
+                    over = true;
+                }
+                break;
 
             //  case 9:
             //   break;
@@ -614,7 +682,8 @@
     /**
      * 复制到剪贴板
      * 非重复的章节会存储到localStorage里
-     * copyContent('这里表示想要复制的内容');
+     * @param {string} copyStr 要复制的内容，包含目录和正文
+     * @example copyContent('这里表示想要复制的内容');
      */
     function copyContent(copyStr) {
         const transfer = document.createElement("textarea");
@@ -630,12 +699,22 @@
             let test = "";
             if (localStorage.getItem("test")) {
                 test = localStorage.getItem("test");
+            } else {
+                test = '　　';
             }
             let testStr = "";
-            if (copyStr.includes(" _目录_  【")) {
-                testStr = test + "\n\n\n" + copyStr;
+            if (copyStr.trim().indexOf("_目录_  【") == 0) {
+                let oldTitle = test.slice(test.indexOf('_目录_  【 '), test.indexOf(' 】') + 2).trim();
+                let newTitle = copyStr.slice(copyStr.indexOf('_目录_  【 '), copyStr.indexOf(' 】') + 2).trim();
+
+                if (oldTitle.length > 0 && newTitle == oldTitle) {
+                    // 顶部标题重复
+                    testStr = test.trim() + copyStr.replace(oldTitle, "").trim();
+                } else {
+                    testStr = test + "\n\n\n" + copyStr;
+                }
             } else {
-                testStr = test + copyStr;
+                testStr = mergeSentence(test, copyStr);
             }
 
             if (judgeRepeat(testStr)) {
@@ -651,7 +730,10 @@
 
     /**
      * 弹窗提示信息
-     * showNotification('复制成功');
+     * @param {string} message 提示信息
+     * @param {number} duration 显示时间，单位毫秒
+     * @param {boolean} read 是否播放语音
+     * @example showNotification('复制成功');
      */
     function showNotification(message = "", duration = 1500, read = true) {
         if (read) {
@@ -739,6 +821,16 @@
             case 14: // piaotianapp
                 $('.m-tpage li')[1].childNodes[0].click();
                 break;
+            case 15: // vipsalary
+                $('.read_btn a')[3].click();
+                break;
+            case 16: // yimixs
+                if ($('.pager')[0].childNodes[5].childNodes[3]) {
+                    $('.pager')[0].childNodes[5].childNodes[3].click();
+                } else {
+                    $('.pager')[0].childNodes[5].click();
+                }
+                break;
 
             // case 9:
             //   break;
@@ -757,28 +849,32 @@
      * 改成标准目录格式头：_目录_  【 第1章 】
      * TODO 中文章节大于一百有问题！
      * TODO 想办法把章节名也筛选进【】中
+     * @param {string} str 文章内容
+     * @returns {string} 改成标准目录格式头
      */
     function matchChapter(str = "") {
-        let con = str;
-        let arr = str.match(/(第\s*)([\u4e00-\u9fa5a-zA-Z0-9]{1,7})\s*章/g);
+        let con = str.replace(
+            /^(\s*)(第[0-9一二三四五六七八九十百千万零两]+(?:章|节|卷|话|篇|部|集|回))[\s\u3000：:—-]*\2/gm,
+            "$1$2"
+        );
+
+        const arr = con.match(/(第\s*)([\u4e00-\u9fa5a-zA-Z0-9]{1,7})\s*章/g);
 
         if (arr) {
             arr.map((e) => {
-                str = str
-                    .replaceAll("【", "[")
-                    .replaceAll("】", "]")
-                    .replace(e, "\n\n\n  _目录_  【 " + e + " 】")
-                    .replaceAll("_目录_  [", "_目录_  【")
-                    .replaceAll("章 ]", "章 】");
+                con = con
+                    .replace(e, "\n\n\n  _目录_  【 " + e + " 】");
             });
-            return str;
+
+            return con;
         }
-        return str;
+        return con;
     }
 
     /**
      * 判断文章是否重复
      * @param {string} text
+     * @returns {boolean} 是否重复
      */
     function judgeRepeat(text = "") {
         let con = localStorage.getItem("test");
@@ -795,6 +891,56 @@
             return true;
         }
         return false;
+    }
+
+    /**
+     * 合并两段字符串，去除首尾重复的句子
+     * @param {string} fir 第一段字符串
+     * @param {string} sec 第二段字符串
+     * @returns {string} 合并后的字符串
+     */
+    function mergeSentence(fir, sec) {
+        if (fir.trim() == "") {
+            return sec;
+        }
+        if (sec.trim() == "") {
+            return fir;
+        }
+        fir = fir.replace(/^\s+|\s+$/g, "").trim();
+        sec = sec.replace(/^\s+|\s+$/g, "").trim();
+
+        // 获取最后一段
+        const getLastLine = str => {
+            const arr = str.split("\n");
+            return arr[arr.length - 1].trim();
+        };
+
+        // 获取第一段
+        const getFirstLine = str => {
+            const arr = str.split("\n");
+            return arr[0].trim();
+        };
+
+        const lastLine = getLastLine(fir);
+        const firstLine = getFirstLine(sec);
+
+        // 标准化：去掉末尾标点
+        const normalize = s =>
+            s.replace(/[。！？!?]+$/g, "").trim();
+
+        // 如果重复
+        if (
+            lastLine &&
+            firstLine &&
+            normalize(lastLine) === normalize(firstLine)
+        ) {
+            // 仅删除 sec 的第一行，保留其它换行结构
+            sec = sec.replace(/^.*(\r?\n|$)/, "");
+
+            return fir + "\n" + sec;
+        }
+
+        return fir + "\n\n" + sec;
     }
 
     const synth = window.speechSynthesis; // 获取浏览器的SpeechSynthesis接口
