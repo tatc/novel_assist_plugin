@@ -28,6 +28,7 @@
 // @match        http://m.yimixs.org/*
 // @match        http://www.yimixs.org/*
 // @match        https://www.nidedizhi1.com/*
+// @match        https://ganjv.com/*
 // @require      http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js
 // @grant        GM_addStyle
 // @run-at       document-start
@@ -42,7 +43,7 @@
 
     /*
      * 可以抓取的网址
-     * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu yuzhengong bikuxs baishuwu 22shuqu piaotianapp vipsalary
+     * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu yuzhengong bikuxs baishuwu 22shuqu piaotianapp vipsalary yimixs nidedizhi1 ganjv
      */
     let websiteObj = [
         {
@@ -172,6 +173,15 @@
             index: 17, // 1
             url: "https://www.nidedizhi1.com",
             sign: "nidedizhi1",
+            title: "",
+            article: "",
+            turn: "",
+            describe: ``,
+        },
+        {
+            index: 18, // 9
+            url: "https://ganjv.com/",
+            sign: "ganjv",
             title: "",
             article: "",
             turn: "",
@@ -694,6 +704,17 @@
 
                 str += b;
                 break;
+            case 18: // ganjv
+                let title = $('.title h1')[0].innerText.split(' ');
+                a = title[title.length - 1];
+                b = $('#chaptercontent')[0].innerText;
+                str = "\n _目录_  【 " + a.trim() + " 】" + "\n\n" + b;
+
+                over = false;
+                if (!isCheck) {
+                    over = true;
+                }
+                break;
 
             //  case 9:
             //   break;
@@ -883,6 +904,9 @@
                 break;
             case 17: // nidedizhi1
                 $(".novelbutton li a")[3].click();
+                break;
+            case 18: // ganjv
+                $(".last a")[0].click();
                 break;
 
             // case 9:
