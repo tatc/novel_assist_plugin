@@ -65,7 +65,7 @@ function runNodeServer(port = 1711) {
 
 // https://www.hanyuguoxue.com/zidian/jianfan 常用简繁汉字对照表
 // https://github.com/BYVoid/OpenCC/blob/master/data/dictionary/TSPhrases.txt 開放中文轉換 https://opencc.js.org/converter?config=tw2sp
-const RootDirectory = 'E:/f/洬/n/000-tool/简繁转换/';
+const RootDirectory = __dirname.replaceAll('\\', '/').replace('file:///', '') + '/';
 const DictStyle = ' : ', DictTemFile = RootDirectory + 'temDict.txt', DictStrFile = RootDirectory + 'traditionalSimplifiedDict.txt', DictArrFile = RootDirectory + 'arrDict.txt';
 const DICT = readDict(DictStrFile).split('\n');
 // 繁体词语大全
