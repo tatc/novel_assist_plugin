@@ -1,20 +1,4 @@
 /**
- * 导入文件
- * @param {*} url 
- * @param {*} callback 
- */
-function loadScript(url, callback) {
-  var script = document.createElement("script");
-  script.type = "text/javascript";
-  script.src = url;
-  script.onload = function () {
-    if (callback) callback();
-  };
-  document.head.appendChild(script);
-}
-
-
-/**
  * 获取 “_目录_  【 第n章 】” 存在位置的数组
  * @param {string} text 
  * @param {boolean} hasText 
@@ -182,23 +166,18 @@ function resumeSpeaking() {
   }
 }
 
+function readFile(conStr) {
+  conArr = getContentArr(conStr);
+  /* 章节序号数组长度 */
+  chapterTotal = getIndexArr(conStr).length;
+}
 
-/* 文本内容 */
-let conStr = '';
-/* 章节序号数组 */
-let conIndexArr = getIndexArr(conStr);
+
 /* 章节内容数组 */
-let conArr = getContentArr(conStr);
+let conArr = [];
 /* 当前章节页 */
 let chapterCurrent = 1;
 /* 总共章节页 */
-let chapterTotal = conIndexArr.length;
+let chapterTotal = 1;
 
-
-loadScript("./data.js", () => {
-  conStr = data;
-  conIndexArr = getIndexArr(conStr);
-  conArr = getContentArr(conStr);
-  chapterTotal = conIndexArr.length;
-});
 

@@ -26,8 +26,11 @@
     }
 
     .inputBtn {
+      display: inline-block;
       margin-right: 20px;
       padding: 5px 10px;
+      text-align: center;
+      font-size: 0.5em;
       color: #eae7e7;
       background-color: #1f8521;
       border: none;
@@ -62,6 +65,10 @@
 <body>
   <div class="nav">
     <div style="text-align: center;font-size: 26px;">
+      <label id="fileName" for="fileInput" class="inputBtn">
+        选择文件
+      </label>
+      <input type="file" id="fileInput" accept=".txt" hidden />
       <input id="changePage" class="input" type="number" value="1">
       <input class="inputBtn" type="button" value="跳页" onclick="changePage()">
       <span id="volumeMinus" class="operateFont" style="padding-right: 10px;">音量减</span>
@@ -88,12 +95,25 @@
   let volume = 0.7;
   let text1 = '', text2 = '', text3 = innerHTML;
 
-  function init(first = false) {
+  getContent();
+
+  document.getElementById('fileInput').addEventListener('change', async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const content = await file.text();
+    readFile(content);
+    saveContent(file.name, content);
+    savePage(1);
+    init(true, file.name);
+  });
+
+  function init(first = false, title = '') {
     if (first && typeof (title) != "undefined") {
       document.title = title;
     }
-    if (first && localStorage.getItem('num')) {
-      chapterCurrent = localStorage.getItem('num');
+    if (first && localStorage.getItem('chapterCurrent')) {
+      chapterCurrent = localStorage.getItem('chapterCurrent');
     }
 
     document.getElementById('volume').innerText = volume;
@@ -113,8 +133,24 @@
     }
   }
 
+  function getContent() {
+    let title = localStorage.getItem('chapterTitle'), content = localStorage.getItem('chapterContent');
+    if (content) {
+      readFile(content);
+      init(true, title);
+      if (title) {
+        document.getElementById('fileName').innerText = title;
+      }
+    }
+  }
+
+  function saveContent(title, str) {
+    localStorage.setItem('chapterTitle', title);
+    localStorage.setItem('chapterContent', str);
+  }
+
   function savePage(num) {
-    localStorage.setItem('num', num);
+    localStorage.setItem('chapterCurrent', num);
   }
 
   function changePage() {
@@ -125,7 +161,6 @@
     }
   }
 
-  init(true);
   // 音量-start
   document.getElementById('volumeMinus').onclick = () => {
     if (volume * 10 > 1) {
@@ -147,11 +182,17 @@
 
   // 翻页-start
   document.getElementById('previous').onclick = () => {
-    if (chapterCurrent > 1) { chapterCurrent--; }
+    if (chapterCurrent > 1) {
+      chapterCurrent--;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
     init();
   }
   document.getElementById('next').onclick = () => {
-    if (chapterCurrent < chapterTotal) { chapterCurrent++; }
+    if (chapterCurrent < chapterTotal) {
+      chapterCurrent++;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
     init();
   }
   // 翻页-end
