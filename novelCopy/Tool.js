@@ -1,7 +1,9 @@
 // ==UserScript==
-// @name         小说复制文本
+// @name         novel copy
+// @name:zh-CN   小说复制文本
 // @namespace    http://tampermonkey.net/
-// @description  可以复制 haitangtxt po18r rourouwu wodeshubao dameishuwang fushutxt 这些网站
+// @description  copy website like haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu
+// @description:zh-CN 可以复制 haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu 这些网站
 // @author       tatc
 // @version       2024-10-6
 // @match        https://m.haitangtxt.net/*
@@ -11,87 +13,41 @@
 // @match        https://www.dameishuwang.net//*
 // @match        https://www.po18yu.vip/*
 // @match        https://www.dingdianwang.net/*
+// @match        https://m.fushuw.org/*
 // @match        https://m.fushutxt.org/*
+// @match        https://m.blxsw.cc/*
+// @match        https://m.fushutxt.cc/*
+// @match        http://m.yuzhengong.com/*
+// @match        https://www.52shuku.net/*
 // @require      http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js
-// @grant        none
+// @grant        GM_addStyle
 // @run-at       document-start
 // ==/UserScript==
 
 (function () {
     /*
-      // @require       https://static.hdslb.com/js/jquery.min.js
-    */
+    // @require       https://static.hdslb.com/js/jquery.min.js
+  */
 
     'use strict';
-    console.log('addBtn');
-    addBtn();
-    addBtnClear();
-
-    if (!$) {
-        var s = document.createElement("script");
-        s.src = "http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js";
-        s.async = false;
-        document.documentElement.appendChild(s);
-    }
-
-    function addBtn(copyStr) {
-        const btn = document.createElement('button');
-        btn.id = 'btn_copy_novel';
-        btn.style.cssText = `position: fixed;top: 3%;right: 3%;padding: 5px 10px;
-        background-color: #aaccee;color: #e8f1f9;border: 1px solid #f2f2ef;border-radius: 5px;box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);z-index: 9999;
-        opacity: 1;transition: opacity 0.3s ease-in-out;
-        user-select:none;cursor: pointer;`;
-        btn.value = 'next';
-        btn.textContent = 'copy';
-        btn.onclick = nextPage;
-        document.documentElement.appendChild(btn);
-
-        // document.body.removeChild(btn);
-    }
-
-    function addBtnClear() {
-        const btn = document.createElement('button');
-        btn.id = 'btn_clear_novel';
-        btn.style.cssText = `position: fixed;top: 3%;left: 1%;padding: 5px;
-        background-color: #e8f1f9;color: #222e17;border: 1px solid #f2f2ef;border-radius: 5px;box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);z-index: 9999;
-        opacity: 1;transition: opacity 0.3s ease-in-out;
-        user-select:none;cursor: pointer;`;
-        btn.textContent = 'n';
-        if (localStorage.getItem('test')) {
-            btn.textContent = 'X';
-        }
-        btn.onclick = clearStorage;
-        document.documentElement.appendChild(btn);
-    }
-
-    function nextPage() {
-        console.log('click');
-        init();
-    }
-
-    function clearStorage() {
-        console.log('clear');
-        localStorage.removeItem('test');
-        document.getElementById('btn_clear_novel').innerText = 'n';
-    }
-
 
     /*
-    * 可以抓取的网址
-    * haitangtxt po18r rourouwu wodeshubao dameishuwang fushutxt
-    */
+  * 可以抓取的网址
+  * haitangtxt po18 rourouwu wodeshubao dameishuwang 52shuku fushu
+  */
     let websiteObj = [
         {
             index: 1,
             url: 'https://m.haitangtxt.net',
             sign: 'haitangtxt',
             title: '',
-            article: ''
+            article: '',
+            turn: ''
         },
         {
             index: 2,
-            url: 'https://www.po18r.com/',
-            sign: 'po18r',
+            url: ['https://www.po18r.com/', 'https://www.po18yu.vip/'],
+            sign: 'po18',
             title: '',
             article: ''
         },
@@ -118,8 +74,8 @@
         },
         {
             index: 6,
-            url: 'https://www.po18yu.vip/',
-            sign: 'po18yu',
+            url: 'https://www.52shuku.net/',
+            sign: '52shuku',
             title: '',
             article: ''
         },
@@ -133,14 +89,170 @@
         },
         {
             index: 8,
-            url: 'https://m.fushutxt.org/',
-            sign: 'fushutxt',
+            url: ['https://m.fushutxt.org/', 'https://m.fushutxt.cc/', 'https://m.fushuw.org/', 'https://m.blxsw.cc/'],
+            sign: 'fushu',
             title: '',
-            article: '',
-            turn: ''
-        }
+            article: ''
+        },
+        /*     {
+      index: 9,
+      url: '',
+      sign: '',
+      title: '',
+      article: '',
+      turn: ''
+    } */
     ];
     let over = true; // 可以翻页
+
+
+    console.log(checkout() ? 'btn show' : 'btn hidden');
+
+    // showNotification(judgeInfoPage(),2000,false); // 判断是列表页还是正文页
+
+    addBtn();
+    addBtnInfo();
+    addBtnClear();
+
+    if (!$) {
+        var s = document.createElement("script");
+        s.src = "http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js";
+        s.async = false;
+        document.documentElement.appendChild(s);
+    }
+
+    function judgeInfoPage() {
+        // #chaptercontent
+        // http://m.yuzhengong.com/
+        // http://m.yuzhengong.com/html/246580/    // http://m.yuzhengong.com/html/135956/index_2.html
+        // http://m.yuzhengong.com/html/246580/212983.html   // http://m.yuzhengong.com/html/135956/75869.html
+        // http://m.yuzhengong.com/html/246580/212983_2.html
+        // https://m.fushuw.org/GLbaihe/  https://m.fushuw.org/GLbaihe/index_1.html
+        // http://m.yuzhengong.com/html/37450/index_4.html
+        let hostname = window.location.hostname;
+        let pathname = window.location.pathname;
+        if (pathname && pathname.at(-1) == '/' || pathname.includes('index_') || document.title.includes('最新章节')) {
+            return 'listPage';
+        }
+        console.log(checkout(), document.title)
+        return 'infoPage';
+    }
+
+    function addBtn(copyStr) {
+        const btn = document.createElement('button');
+        if (document.getElementById("btn_copy_novel")) {
+            document.getElementById("btn_copy_novel").remove();
+        }
+        btn.id = 'btn_copy_novel';
+        btn.style.cssText = `position: fixed;bottom: 5%;left: 3%;padding: 7px 12px;
+        background-color: #aaccee;color: #e8f1f9;border: 1px solid #f2f2ef;border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);z-index: 9000;
+        opacity: 1;transition: opacity 0.3s ease-in-out;
+        user-select:none;cursor: pointer;opacity: 0.5;`;
+        btn.value = 'next';
+        btn.textContent = 'copy';
+        btn.onclick = nextPage;
+        document.documentElement.appendChild(btn);
+        console.log('addBtn');
+    }
+
+    function addBtnInfo() {
+        const btn = document.createElement('button');
+        btn.id = 'btn_info_novel';
+        btn.style.cssText = `position: fixed;bottom: 5%;left: 25%;padding: 7px;
+        background-color: #e8f1f9;color: #222e17;border: 1px solid #f2f2ef;border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);z-index: 9000;
+        opacity: 1;transition: opacity 0.3s ease-in-out;
+        user-select:none;cursor: pointer;opacity: 0.5;`;
+        btn.textContent = 'info';
+        btn.onclick = openSetting;
+        document.documentElement.appendChild(btn);
+    }
+
+    function addBtnClear() {
+        const btn = document.createElement('button');
+        btn.id = 'btn_clear_novel';
+        btn.style.cssText = `position: fixed;bottom: 5%;right: 10%;padding: 7px;
+        background-color: #e8f1f9;color: #222e17;border: 1px solid #f2f2ef;border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);z-index: 9000;
+        opacity: 1;transition: opacity 0.3s ease-in-out;
+        user-select:none;cursor: pointer;opacity: 0.5;`;
+        btn.textContent = 'n';
+        if (localStorage.getItem('test')) {
+            btn.textContent = 'X';
+        }
+        btn.onclick = clearStorage;
+        document.documentElement.appendChild(btn);
+    }
+
+    function nextPage() {
+        console.log('click');
+        init();
+    }
+
+    /*
+    * 展示缓存的内容列表
+    * 设置是否保存
+    */
+    function openSetting() {
+        let message = '';
+        Object.keys(localStorage).forEach(key => {
+            // message=message+'<p>'+key+'</p>';
+            message = message + `
+              <p>${key}：${localStorage[key].slice(0, 20)}</p>
+            `;
+        });
+
+        // 创建遮罩层
+        const overlay = document.createElement("div");
+        overlay.id = 'modal_overlay';
+        overlay.style.cssText = `position: fixed;top: 0; left: 0;width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5);display: flex;justify-content: center;align-items: center;z-index: 9001;`;
+
+        // 创建弹窗内容
+        const modal = document.createElement("div");
+        modal.setAttribute('id', 'modal_content');
+        GM_addStyle(`#modal_content{background: #fff;padding: 10px 0 10px 10px;border-radius: 10px;
+        min-width: 300px;max-width: 80%;max-height: 80%;box-shadow: 0 5px 20px rgba(0,0,0,0.3);text-align: center;}`);
+
+        modal.innerHTML = `
+        <input id="is_save" type="checkbox" checked>
+        <div>${message}</div>
+        <br />
+        <button id="modal_close_btn">关闭</button>
+      `;
+        GM_addStyle('#modal_content div{height:300px;overflow:auto;}');
+        GM_addStyle('#modal_close_btn{cursor: pointer;}');
+
+        // 插入到遮罩层
+        overlay.appendChild(modal);
+        // 插入到页面
+        document.body.appendChild(overlay);
+        // 禁止页面滚动
+        document.body.style.overflow = "hidden";
+
+        overlay.addEventListener("click", (e) => {
+            // 点击遮罩层关闭（但点到弹窗内容时不关闭）
+            if (e.target === overlay || e.target === document.getElementById("modal_close_btn")) {
+                overlay.remove();
+                document.body.style.overflow = ""; // 恢复页面滚动
+            }
+            // 翻页按钮是否保存本页
+            if (e.target === document.getElementById("is_save")) {
+                console.log(e.target.checked)
+            }
+        });
+
+    }
+
+    function clearStorage() {
+        console.log('clear');
+        localStorage.removeItem('test');
+        document.getElementById('btn_clear_novel').innerText = 'n';
+    }
+
+
+
 
     function init() {
         // 海棠的开启加载完整性校验
@@ -157,24 +269,29 @@
     }
 
     /*
-    * 校验是否可以复制此网站
-    * 不能校验返回0，其他返回序号
-    */
+  * 校验是否可以复制此网站
+  * 不能校验返回0，其他返回序号
+  */
     function checkout() {
         let result = 0;
         websiteObj.forEach(obj => {
-            if (window.location.href.includes(obj.sign)) {
-                result = obj.index;
+            if (result == 0) {
+                if (typeof obj.url == 'object' && obj.url.join().includes(window.location.hostname)) {
+                    result = obj.index;
+                }
+                else if (window.location.href.includes(obj.sign)) {
+                    result = obj.index;
+                }
             }
         });
         return result;
     }
 
     /*
-    * 获取文本内容
-    * index 网站序号
-    * isCheck 是否校验网页是否加载完整
-    */
+  * 获取文本内容
+  * index 网站序号
+  * isCheck 是否校验网页是否加载完整
+  */
     function getCopyText(index, isCheck = false) {
         let str = '', a = '', b = '';
         switch (index) {
@@ -196,7 +313,7 @@
                 })
                 str += b;
                 break;
-            case 2: // po18r
+            case 2: // po18
                 a = $('#mlfy_main_text h1').text();
                 b = $('#TextContent').text().replace('\n   \n   theme();', '').replace('chap_tp();', '').replace(`<br />`, ``).replace(`<br />`, ``);
                 str = ' _目录_  【 ' + a + ' 】' + b;
@@ -219,7 +336,6 @@
                 var strArr = document.querySelectorAll('#ChapterView div');
                 var p = '';
                 var clearTitle = false; // 不是一章的首页
-                var quit = false;
                 if (document.getElementsByClassName('chapterPages')[0].innerText.length > 0) {
                     // 是一章的首页
                     if (document.getElementsByClassName('curr')[0].innerText == '【1】') {
@@ -241,24 +357,6 @@
                             if (clearTitle && i == 1) {
                                 str = ' _目录_  【 ' + title.trim() + ' 】 \n\n\n';
                             }
-                            // if(p.trim()=='--'){
-                            //     quit=true;
-                            // }
-                            // if(quit){
-                            //     return;
-                            // }
-                            // if(clearTitle){
-                            //     if(i==2){
-                            //        str=' _目录_  【 ' + p.trim() + ' 】 \n\n\n';
-                            //     }else if(i>2){
-                            //         str=str+p;
-                            //     }
-                            // }else{
-                            //     if(i==1){
-                            //         str='  ';
-                            //     }
-                            //     str=str+p;
-                            // }
                             str = str + p;
                         }
                     }
@@ -278,29 +376,42 @@
                     over = true;
                 }
                 break;
-            case 6: // po18yu
-                a = $('#mlfy_main_text h1').text();
-                b = $('#TextContent').text().replace('\n   \n   theme();', '').replace('chap_tp();', '').replace(`<br />`, ``).replace(`<br />`, ``);
-                str = ' _目录_  【 ' + a + ' 】' + b;
-                over = false;
-                if (!isCheck) {
-                    over = true;
-                }
-                break;
-            case 8: // fushutxt
+            case 6: // 52shuku
                 // 不按网页每页顶部的标题来做目录，按正文内出现的章节来做目录
-                a = $('#text').text().replace(`<br />`, `\n`);
+                a = $('#nr1').text().replace(`<br />`, `\n`);
                 b = matchChapter(a);
-                str = b.slice(0, b.indexOf('耽美小说 www')).trimStart();
+                str = b.slice(0, b.indexOf('目录 上一页 下一页 尾页')).trimStart();
                 str = '\n\n　　' + str.replaceAll('　　', '\n\n　　');
                 over = false;
                 if (!isCheck) {
                     over = true;
                 }
                 break;
+            case 8: // fushu
+                // 不按网页每页顶部的标题来做目录，按正文内出现的章节来做目录
+                a = $('#text').text().replace(`<br />`, `\n`);
+                b = matchChapter(a);
+                // 剪裁底部无关正文内容
+                if (b.includes('耽美小说 www')) {
+                    str = b.slice(0, b.indexOf('耽美小说 www')).trimStart();
+                } else if (b.includes('自愿捐助网站')) {
+                    str = b.slice(0, b.indexOf('自愿捐助网站')).trimStart();
+                }
+                str = '\n\n　　' + str.replaceAll('　　', '\n\n　　');
+                over = false;
+                if (!isCheck) {
+                    over = true;
+                }
+                break;
+            /*       case 9:
+      break; */
             default: // 基础的通过标签id或者class类名获取章节内容
                 a = $(websiteObj[index - 1].title).innerText;
-                b = $(websiteObj[index - 1].article).innerText.replace('    ', '\n   ').replace('<br>', '\n   ');
+                if ($(websiteObj[index - 1].article).innerText) {
+                    b = $(websiteObj[index - 1].article).innerText.replace('    ', '\n   ').replace('<br>', '\n   ');
+                } else {
+                    b = $(websiteObj[index - 1].article)[0].innerText.replace('    ', '\n   ').replace('<br>', '\n   ');
+                }
                 if (b[0] != '') {
                     b = '\n\n\n' + b;
                 }
@@ -315,10 +426,10 @@
     }
 
     /*
-    * 复制到剪贴板
-    * 非重复的章节会存储到localStorage里
-    * copyContent('这里表示想要复制的内容');
-    */
+  * 复制到剪贴板
+  * 非重复的章节会存储到localStorage里
+  * copyContent('这里表示想要复制的内容');
+  */
     function copyContent(copyStr) {
         const transfer = document.createElement('textarea');
         document.body.appendChild(transfer);
@@ -352,11 +463,13 @@
     }
 
     /*
-    * 弹窗提示信息
-    * showNotification('复制成功');
-    */
-    function showNotification(message = '', duration = 1500) {
-        readText(message + ' ', 1); // 不加空格会不播放，猜测因为太短了
+  * 弹窗提示信息
+  * showNotification('复制成功');
+  */
+    function showNotification(message = '', duration = 1500, read = true) {
+        if (read) {
+            readText(message + ' ', 1); // 不加空格会不播放，猜测因为太短了
+        }
         var notification = document.createElement('div');
         // notification.className = 'notification';
         notification.style.cssText = "position: fixed;top: 35%;left: 45%;padding: 15px;background-color: #f0f0f0;color: #333;border: 1px solid #ccc;border-radius: 5px;box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);z-index: 9999;opacity: 1;transition: opacity 0.3s ease-in-out;";
@@ -364,21 +477,19 @@
         document.body.appendChild(notification);
         setTimeout(function () {
             notification.style.opacity = 0;
-            // setTimeout(function () {
             document.body.removeChild(notification);
-            // }, 0);
         }, duration);
     }
 
     /*
-    * 下一章
-    */
+  * 下一章
+  */
     function turnPage(index) {
         switch (index) {
             case 1: // haitangtxt
                 $('.novelbutton li a')[3].click();
                 break;
-            case 2: // po18r
+            case 2: // po18
                 $('.mlfy_page a')[4].click();
                 break;
             case 3: // rourouwu
@@ -407,16 +518,18 @@
             case 5: // dameishuwang
                 $('#linkNext')[0].click();
                 break;
-            case 6: // po18yu
-                $('.mlfy_page a')[4].click();
+            case 6: // 52shuku
+                $('.pagination2 a')[2].click();
                 break;
-            case 8: // fushutxt
+            case 8: // fushu
                 if ($('.pageLink')[0].innerText.includes('尾页')) {
                     $('.pageLink a')[$('.pageLink a').length - 2].click();
                 } else {
                     showNotification('全文结束!');
                 }
                 break;
+            /*       case 9:
+      break; */
             default: // 基础的通过标签id或者class类名获取章节内容
                 $(websiteObj[index - 1].turn).click();
                 break;
@@ -424,12 +537,13 @@
     }
 
     /*
-    * 匹配章节 如：第1章、第一章
-    * 改成标准目录格式头：_目录_  【 第1章 】
-    * TODO 中文章节大于一百有问题！
-    * TODO 想办法把章节名也筛选进【】中
-    */
+  * 匹配章节 如：第1章、第一章
+  * 改成标准目录格式头：_目录_  【 第1章 】
+  * TODO 中文章节大于一百有问题！
+  * TODO 想办法把章节名也筛选进【】中
+  */
     function matchChapter(str = '') {
+        let con = str;
         let arr = str.match(/(第\s*)([\u4e00-\u9fa5a-zA-Z0-9]{1,7})\s*章/g);
 
         if (arr) {
@@ -442,9 +556,9 @@
     }
 
     /**
-     * 判断文章是否重复
-     * @param {string} text
-    */
+   * 判断文章是否重复
+   * @param {string} text
+  */
     function judgeRepeat(text = '') {
         let con = localStorage.getItem('test');
         if (con && con.slice(con.length - 15, con.length).includes(text.slice(text.length - 15, text.length))) {
@@ -457,10 +571,10 @@
     let utterance = null; // 存储当前的语音内容
     let speakObj = {};
     /**
-     * 播放语音
-     * 在播放过程中修改音量没用
-     * @param {string} text
-     */
+   * 播放语音
+   * 在播放过程中修改音量没用
+   * @param {string} text
+   */
     function readText(text = '', volume = 1) {
         // 创建一个SpeechSynthesisUtterance对象（语音合成的内容）
         utterance = new SpeechSynthesisUtterance(text);
