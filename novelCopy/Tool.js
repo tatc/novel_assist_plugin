@@ -115,11 +115,12 @@
                 "https://www.fushutxt.cc/",
                 "https://m.fushuw.org/",
                 "https://www.fushuw.org/",
-                "https://m.blxsw.cc/",
+                "https://m.blxsw.cc/"
             ],
             sign: "fushu",
             title: "",
             article: "",
+            describe: `福书网批量获取作品列表`
         },
         {
             index: 9,
@@ -433,21 +434,29 @@
         `);
 
         modal.innerHTML = `
-            <div class="modal_checkbox">
-            <div><input id="is_save" type="checkbox" checked>
+            <div class="modal_one_line">
+            <div class="modal_checkbox"><input id="is_save" type="checkbox" checked>
             <p>是否保存本页：</p></div>
-            <div><input id="is_transform" type="checkbox" checked>
+            <div class="modal_checkbox"><input id="is_transform" type="checkbox" checked>
             <p>是否转换繁体：</p></div>
             </div>
-            <p>
-            <button id="novel_copy" class="btn">novel copy</button>
-            </p>
+            <div class="modal_one_line">
+            <button id="novel_copy" class="btn">复制全文</button>
+            ${checkout() == 8 && judgeInfoPage() == 'listPage' ? '<button id="novel_copy_links" class="btn">批量获取作品列表</button>' : ""}   
+            </div>
             <div class="modal_message">${message}</div>
             <br />
             <button id="modal_close_btn" class="btn">关闭</button>
             <button id="modal_reset_btn" class="btn">重置</button>
         `;
         GM_addStyle(`
+        .modal_one_line{
+            margin: 5px 0;        
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+        }
         .modal_checkbox{
             display: inline-flex;
             flex-direction: row;
@@ -510,6 +519,25 @@
                     } else {
                         setClipboardText(novel);
                     }
+                }
+            }
+            // 批量获取作品列表
+            if (e.target === document.getElementById("novel_copy_links")) {
+                // 福书网
+                if (checkout() == 8) {
+                    // 批量获取excel  作者	作品 链接
+                    let arr = document.getElementsByClassName("list-content");
+                    let links = [];
+                    [...arr].forEach((e, i) => {
+                        // 作者	作品 链接
+                        let author = e.children[2].innerText.replace('作者：', '');
+                        let novel = e.children[0].innerText;
+                        let href = e.children[0].parentNode.offsetParent.href;
+
+                        links.push({ author, title: novel, url: href });
+                    });
+                    // 批量复制超链接
+                    copyLinks(links);
                 }
             }
             // 重置设置
@@ -702,7 +730,7 @@
                 break;
             case 8: // fushu
                 // 不按网页每页顶部的标题来做目录，按正文内出现的章节来做目录
-                if ($("#readability-page-1")) {
+                if ($("#readability-page-1") && $("#readability-page-1").text()) {
                     // TODO 浏览器阅读模式获取不到页面元素
                     a = $("#readability-page-1").text();
                 } else {
@@ -1405,6 +1433,59 @@
             }
             document.body.removeChild(tmp);
         }
+    }
+
+    /**
+     * 批量复制超链接
+     * @param {array} links [{ author, title, url }]
+     */
+    async function copyLinks(links) {
+        const html = `
+        <table>
+            <tbody>
+                ${links.map(item => `
+                    <tr>
+                        <td>${escapeHtml(item.author)}</td>
+                        <td>
+                            <a href="${escapeHtml(item.url)}">${escapeHtml(item.title)}</a>
+                        </td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+
+        const plain = links.map(item =>
+            `${item.title}\t${item.title}`
+        ).join("\n");
+
+        const clipboardItem = new ClipboardItem({
+            "text/html": new Blob([html], {
+                type: "text/html"
+            }),
+            "text/plain": new Blob([plain], {
+                type: "text/plain"
+            })
+        });
+
+        await navigator.clipboard.write([clipboardItem]);
+
+        showNotification(`成功复制 ${links.length} 个链接`);
+    }
+
+    /**
+     * 转义HTML特殊字符
+     * @param {string} str 要转义的字符串
+     * @returns {string} 转义后的字符串
+     */
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, char => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[char]);
     }
 
     /**
