@@ -26,6 +26,32 @@ function getIndexArr(text, hasText = false) {
   return arr;
 }
 
+
+/**
+ * 匹配章节 如：第1章、第一章 改成标准目录格式头：_目录_  【 第1章 】
+ *  from ../novelCopy/Tool.js
+ * @param {string} str 文章内容
+ * @returns {string} 改成标准目录格式头
+ */
+function matchChapter(str = "") {
+  let con = str.replace(
+    /^(\s*)(第[0-9一二三四五六七八九十百千万零两]+(?:章|节|卷|话|篇|部|集|回))[\s\u3000：:—-]*\2/gm,
+    "$1$2"
+  );
+
+  const arr = con.match(/(第\s*)([\u4e00-\u9fa5a-zA-Z0-9]{1,7})\s*章/g);
+
+  if (arr) {
+    arr.map((e) => {
+      con = con
+        .replace(e, "\n\n\n  _目录_  【 " + e + " 】");
+    });
+
+    return con;
+  }
+  return con;
+}
+
 /**
  * TODO 获取不到，还需要修改此函数
  * 根据目录分割文字
@@ -167,6 +193,10 @@ function resumeSpeaking() {
 }
 
 function readFile(conStr) {
+  // 改成标准目录格式头
+  if (!conStr.includes('_目录_  【 ')) {
+    conStr = matchChapter(conStr);
+  }
   conArr = getContentArr(conStr);
   /* 章节序号数组长度 */
   chapterTotal = getIndexArr(conStr).length;
