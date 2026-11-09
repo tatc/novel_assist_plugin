@@ -11,6 +11,11 @@
   <script type="text/javascript" src="./main.js"></script>
   <script src="https://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
   <style type="text/css">
+    body {
+      margin: 0;
+      font-size: 22px;
+    }
+
     .nav {
       position: fixed;
       top: 0;
@@ -39,11 +44,23 @@
 
     .content {
       margin-top: 150px;
-      font-size: 20px;
+      padding: 5px 15px;
+      background-color: #eff5ef;
+      line-height: 2em;
+    }
+
+    .oneLineCenter {
+      margin: 20px auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #chapterTitle {
+      margin-right: 20px;
     }
 
     #readText {
-      margin: 20px auto 0 auto;
       width: 100px;
       text-align: center;
       background-color: #eae3d7;
@@ -52,6 +69,11 @@
     .operateFont {
       cursor: pointer;
       user-select: none;
+    }
+
+    .tipText {
+      text-align: center;
+      font-size: 26px;
     }
 
     .highLight {
@@ -64,7 +86,7 @@
 
 <body>
   <div class="nav">
-    <div style="text-align: center;font-size: 26px;">
+    <div class="tipText">
       <label id="fileName" for="fileInput" class="inputBtn">
         选择文件
       </label>
@@ -75,14 +97,17 @@
       <span id="volume" class="operateFont" style="padding-right: 10px;"></span>
       <span id="volumeAdd" class="operateFont" style="padding-right: 20px;">音量加</span>
     </div>
-    <div id="video" class="operateFont" style="text-align: center;font-size: 26px;">
+    <div id="video" class="tipText">
       <span id="previous" class="operateFont" style="padding-right: 10px;">上一页</span>
       <span id="page" style="padding-right: 10px;"></span>
       <span id="next" style="padding-right: 50px;user-select: none;">下一页</span>
       <span id="videoStart" class="operateFont" style="padding-right: 20px;">播放</span>
       <span id="videoPause" class="operateFont">未播放不可停</span>
     </div>
-    <div id="readText">&nbsp;</div>
+    <div class="oneLineCenter">
+      <div id="chapterTitle"></div>
+      <div id="readText">&nbsp;</div>
+    </div>
   </div>
   <div id="text" class="content" style="padding-top: 10px;"></div>
 </body>
@@ -94,6 +119,7 @@
   let innerHTML = html.innerHTML;
   let volume = 0.7;
   let text1 = '', text2 = '', text3 = innerHTML;
+  let nextPage = false;
 
   getContent();
 
@@ -120,10 +146,19 @@
     document.getElementById('page').innerText = `${chapterCurrent} / ${chapterTotal}`;
 
     if (conArr.length > 0) {
-      html.innerText = conArr[chapterCurrent - 1];
-      innerHTML = html.innerHTML;
+      let con = conArr[chapterCurrent - 1];
+      let chapterTitle = con.slice(0, con.indexOf(' 】') + 2);
+      if (nextPage) {
+        html.innerText = '';
+        nextPage = false;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      html.innerText = con.replace(chapterTitle, '');
+      innerHTML = '<p>' + html.innerHTML.replaceAll('<br>', '</p><p>') + '</p>';
+      html.innerHTML = '<br>' + innerHTML.replaceAll('<p></p>', '');
       text1 = '', text2 = '';
       text3 = innerHTML;
+      document.getElementById('chapterTitle').innerText = chapterTitle;
     }
 
     if (first && conArr.length == 0) {
@@ -184,14 +219,14 @@
   document.getElementById('previous').onclick = () => {
     if (chapterCurrent > 1) {
       chapterCurrent--;
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      nextPage = true;
     }
     init();
   }
   document.getElementById('next').onclick = () => {
     if (chapterCurrent < chapterTotal) {
       chapterCurrent++;
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      nextPage = true;
     }
     init();
   }
