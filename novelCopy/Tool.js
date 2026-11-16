@@ -37,6 +37,7 @@
 // @match        https://www.256wx.org/*
 // @match        https://www.pia66.com/*
 // @match        https://piaotian.bestzhufu.com/*
+// @match        https://tuoverse.com/*
 // @require      http://cdn.bootcss.com/jquery/1.8.3/jquery.min.js
 // @grant        GM_addStyle
 // @run-at       document-start
@@ -153,35 +154,40 @@
             title: "",
             article: "",
             describe: ``,
-        }, {
+        },
+        {
             index: 13, // 3
             url: "https://www.22shuqu.com/",
             sign: "22shuqu",
             title: "",
             article: "",
             describe: ``,
-        }, {
+        },
+        {
             index: 14,
             url: "https://www.piaotianapp.com",
             sign: "piaotianapp",
             title: "",
             article: "",
             describe: ``,
-        }, {
+        },
+        {
             index: 15,
             url: "https://www.vipsalary.com",
             sign: "vipsalary",
             title: "",
             article: "",
             describe: ``,
-        }, {
+        },
+        {
             index: 16,
             url: ["http://m.yimixs.org/", "http://www.yimixs.org/"],
             sign: "yimixs",
             title: "",
             article: "",
             describe: ``,
-        }, {
+        },
+        {
             index: 17, // 1
             url: "https://www.nidedizhi1.com",
             sign: "nidedizhi1",
@@ -222,6 +228,15 @@
             title: "",
             article: "",
         },
+        {
+            index: 22,
+            url: "https://tuoverse.com",
+            sign: "tuoverse",
+            title: "",
+            article: "",
+            turn: "",
+            describe: ``,
+        },
 
     ];
     /**
@@ -233,10 +248,13 @@
      */
     let Is_save = getIsSave();
     /**
-     * 是否转换繁体/简体中文，默认不转换
+     * 是否播放语音，默认播放
      */
+    let Is_read = getIsRead();
+    /**
+      * 是否转换繁体/简体中文，默认不转换
+      */
     let Is_transform = getIsTransform();
-
 
     console.log(checkout() ? "btn show" : "btn hidden", judgeInfoPage());
 
@@ -268,7 +286,7 @@
         let lastKnownScrollPosition = 0;
         let ticking = false;
         const controller = new AbortController();
-        // 为 滚动条 添加可被移除的事件监听器 
+        // 为 滚动条 添加可被移除的事件监听器
         document.addEventListener("scroll", (event) => {
             lastKnownScrollPosition = window.scrollY;
 
@@ -383,6 +401,16 @@
         return res;
     }
 
+    function getIsRead() {
+        let res = localStorage.getItem("Novel-Copy-Is_read");
+        if (res) {
+            res = res === "true" ? true : false;
+        } else {
+            res = true;
+        }
+        return res;
+    }
+
     function getIsTransform() {
         let res = localStorage.getItem("Novel-Copy-Is_transform");
         if (res) {
@@ -437,12 +465,14 @@
             <div class="modal_one_line">
             <div class="modal_checkbox"><input id="is_save" type="checkbox" checked>
             <p>是否保存本页：</p></div>
+            <div class="modal_checkbox"><input id="is_read" type="checkbox" checked>
+            <p>是否播放语音：</p></div>
             <div class="modal_checkbox"><input id="is_transform" type="checkbox" checked>
             <p>是否转换繁体：</p></div>
             </div>
             <div class="modal_one_line">
             <button id="novel_copy" class="btn">复制全文</button>
-            ${checkout() == 8 && judgeInfoPage() == 'listPage' ? '<button id="novel_copy_links" class="btn">批量获取作品列表</button>' : ""}   
+            ${checkout() == 8 && judgeInfoPage() == 'listPage' ? '<button id="novel_copy_links" class="btn">批量获取作品列表</button>' : ""}
             </div>
             <div class="modal_message">${message}</div>
             <br />
@@ -451,7 +481,7 @@
         `;
         GM_addStyle(`
         .modal_one_line{
-            margin: 5px 0;        
+            margin: 5px 0;
             display: flex;
             flex-direction: row;
             justify-content: space-around;
@@ -481,6 +511,7 @@
         document.body.style.overflow = "hidden";
         // review checkbox
         document.getElementById("is_save").checked = getIsSave();
+        document.getElementById("is_read").checked = getIsRead();
         document.getElementById("is_transform").checked = getIsTransform();
 
         overlay.addEventListener("click", (e) => {
@@ -492,10 +523,15 @@
                 overlay.remove();
                 document.body.style.overflow = ""; // 恢复页面滚动
             }
-            // 翻页按钮是否保存本页 
+            // 翻页按钮是否保存本页
             if (e.target === document.getElementById("is_save")) {
                 localStorage.setItem("Novel-Copy-Is_save", e.target.checked);
                 Is_save = e.target.checked;
+            }
+            // 翻页按钮是否播放语音
+            if (e.target === document.getElementById("is_read")) {
+                localStorage.setItem("Novel-Copy-Is_read", e.target.checked);
+                Is_read = e.target.checked;
             }
             // 翻页按钮是否转换繁体
             if (e.target === document.getElementById("is_transform")) {
@@ -511,7 +547,7 @@
                         navigator.clipboard
                             .writeText(novel) // .replace(/\n{3,}/g, "\n\n")
                             .then(() => {
-                                showNotification("复制全文");
+                                showNotification("复制全文", 1500, false);
                             })
                             .catch((err) => {
                                 console.error("novel_copy 复制失败", err);
@@ -578,7 +614,7 @@
         if (Is_over) {
             turnPage(checkout());
         } else {
-            showNotification("loading", 3000);
+            showNotification("loading", 3000, Is_read);
         }
     }
 
@@ -782,7 +818,7 @@
                     Is_over = true;
                 }
                 break;
-            case 12: // baishuwu 
+            case 12: // baishuwu
                 // TODO: 目录问题，有些正文没章节名，需要从每页顶部的标题提取章节名
                 $(".word_read p").each((i, e) => {
                     let p = e.innerText.trim();
@@ -965,6 +1001,21 @@
                     Is_over = true;
                 }
                 break;
+            case 22: // tuoverse
+                // 不按网页每页顶部的标题来做目录，按正文内出现的章节来做目录
+                if ($("#readability-page-1") && $("#readability-page-1").text()) {
+                    // TODO 浏览器阅读模式获取不到页面元素
+                    b = $("#readability-page-1").text();
+                } else {
+                    b = $('.chapter-text')[0].innerHTML;
+                }
+
+                str = matchChapter(htmlToPlainTextForNotepad(b));
+                Is_over = false;
+                if (!isCheck) {
+                    Is_over = true;
+                }
+                break;
 
             //  case 9:
             //   break;
@@ -1036,10 +1087,10 @@
             }
 
             if (judgeRepeat(testStr)) {
-                showNotification("翻页成功");
+                showNotification("翻页成功", 1500, Is_read);
             } else {
                 localStorage.setItem("Novel-Copy-novel_content", testStr);
-                showNotification("复制成功");
+                showNotification("复制成功", 1500, Is_read);
             }
         }
 
@@ -1073,6 +1124,7 @@
      * 下一章
      */
     function turnPage(index) {
+        let len = 0;
         switch (index) {
             case 0: // 不能校验此网站
                 break;
@@ -1129,7 +1181,7 @@
                 if ($(".pageLink")[0] && $(".pageLink")[0].innerText.includes("尾页")) {
                     $(".pageLink a")[$(".pageLink a").length - 2].click();
                 } else {
-                    showNotification("全文结束!");
+                    showNotification("全文结束!", 1500, Is_read);
                 }
                 break;
             case 10:
@@ -1170,10 +1222,21 @@
             case 19: // jcxs
                 $(".pereview a")[2].click();
             case 20: // 256wx
-                let len = $(".page a").length;
+                len = $(".page a").length;
                 $(".page a")[len - 2].click();
             case 21: // piaotian
                 $(".pt-nextchapter a")[0].click();
+            case 22: // tuoverse
+                if ($(".nav-buttons a")[0]) {
+                    len = document.querySelectorAll(".nav-buttons a").length;
+                    $(".nav-buttons a")[len - 1].click();
+                } else {
+                    // vivaldi read model
+                    let url = window.location.href;
+                    let num = url.slice(url.indexOf('-') + 1, url.indexOf('.html', '-'));
+                    window.location.href = url.slice(url.indexOf('https'), url.indexOf('-') + 1) + (Number(num) + 1) + '.html';
+                    return;
+                }
 
             // case 9:
             //   break;
@@ -1470,7 +1533,7 @@
 
         await navigator.clipboard.write([clipboardItem]);
 
-        showNotification(`成功复制 ${links.length} 个链接`);
+        showNotification(`成功复制 ${links.length} 个链接`, 1500, false);
     }
 
     /**
