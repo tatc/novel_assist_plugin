@@ -252,23 +252,16 @@
      * 是否可以翻页，默认可以
      */
     let Is_over = true;
-    /**
-     * 是否保存本页，默认保存
-     */
-    let Is_save = getIsSave();
-    /**
-     * 是否播放语音，默认播放
-     */
-    let Is_read = getIsRead();
-    /**
-      * 是否转换繁体/简体中文，默认不转换
-      */
-    let Is_transform = getIsTransform();
+
+
+    // 本地存储键名
+    const LocalStorageKey = "Novel-Copy-";
 
     console.log(checkout() ? "btn show" : "btn hidden", judgeInfoPage());
 
     // showNotification(judgeInfoPage(),2000,false); // 判断是列表页还是正文页
 
+    resetSetting('init');
     addBtn();
     addBtnInfo();
     addBtnClear();
@@ -309,7 +302,7 @@
                     }
                     if (page && !btn || !page) {
                         if (!btn) {
-                            addBtn('div', false);
+                            addBtn('div');
                             addBtnInfo('div');
                             addBtnClear('div'); console.log('add btn success');
 
@@ -340,7 +333,7 @@
         return "infoPage";
     }
 
-    function addBtn(tag = 'button', isCopy = true) {
+    function addBtn(tag = 'button') {
         const btn = document.createElement(tag);
         if (document.getElementById("btn_copy_novel")) {
             document.getElementById("btn_copy_novel").remove();
@@ -354,8 +347,8 @@
         user-select:none;cursor: pointer;opacity: 0.5;
     `;
         btn.value = "next";
-        btn.textContent = isCopy ? "copy" : "next";
-        btn.onclick = () => nextPage(isCopy);
+        btn.textContent = getLocalStorage("Is_save") ? "copy" : "next";
+        btn.onclick = () => nextPage(getLocalStorage("Is_save"));
         document.documentElement.appendChild(btn);
     }
 
@@ -381,7 +374,7 @@
         opacity: 1;transition: opacity 0.3s ease-in-out;
         user-select:none;cursor: pointer;opacity: 0.5;`;
         btn.textContent = "n";
-        if (localStorage.getItem("Novel-Copy-novel_content")) {
+        if (getLocalStorage("novel_content")) {
             btn.textContent = "X";
         }
         btn.onclick = clearStorage;
@@ -400,34 +393,76 @@
         }
     }
 
-    function getIsSave() {
-        let res = localStorage.getItem("Novel-Copy-Is_save");
+    /**
+     * 从本地存储中获取设置值
+     * @param {string} key 本地存储键名
+     * @returns {boolean} 从本地存储中获取的值
+     */
+    function getLocalStorage(key = '') {
+        let res = localStorage.getItem(LocalStorageKey + key);
         if (res) {
-            res = res === "true" ? true : false;
+            if (res === "true") {
+                return true;
+            } else if (res === "false") {
+                return false;
+            }
+            return res;
         } else {
-            res = true;
+            return false;
         }
-        return res;
     }
 
-    function getIsRead() {
-        let res = localStorage.getItem("Novel-Copy-Is_read");
-        if (res) {
-            res = res === "true" ? true : false;
-        } else {
-            res = true;
+    /**
+     * 设置本地存储值
+     * @param {string} key 本地存储键名
+     * @param {string} value 本地存储值
+     */
+    function operateLocalStorage(key = '', value) {
+        if (value || value === 0 || value === false || value === '') {
+            localStorage.setItem(LocalStorageKey + key, value);
+        } else if (localStorage.getItem(LocalStorageKey + key)) {
+            localStorage.removeItem(LocalStorageKey + key);
         }
-        return res;
+        return;
     }
 
-    function getIsTransform() {
-        let res = localStorage.getItem("Novel-Copy-Is_transform");
-        if (res) {
-            res = res === "true" ? true : false;
-        } else {
-            res = false;
+    /**
+     * 重置设置
+     * Is_save, Is_read, Is_transform, Is_pinyin
+     * @param {string} type 重置类型 默认重置所有设置 init：初始化设置
+     */
+    function resetSetting(type = '') {
+        if (type !== 'init' || !localStorage.hasOwnProperty(LocalStorageKey + "Is_save")) {
+            /**
+             * 是否保存本页，默认保存
+             */
+            operateLocalStorage("Is_save", true);
+            /**
+            * 是否播放语音，默认播放
+            */
+            operateLocalStorage("Is_read", true);
+            /**
+             * 是否转换繁体/简体中文，默认不转换
+             */
+            operateLocalStorage("Is_transform", false);
+            /**
+             * 是否替换拼音，默认不替换
+             */
+            operateLocalStorage("Is_pinyin", false);
+            reviewSetting();
         }
-        return res;
+    }
+
+    /**
+     * review setting checkbox
+     */
+    function reviewSetting() {
+        if ($("#modal_content")[0]) {
+            document.getElementById("is_save").checked = getLocalStorage("Is_save");
+            document.getElementById("is_read").checked = getLocalStorage("Is_read");
+            document.getElementById("is_transform").checked = getLocalStorage("Is_transform");
+            document.getElementById("is_pinyin").checked = getLocalStorage("Is_pinyin");
+        }
     }
 
     /**
@@ -472,12 +507,10 @@
 
         modal.innerHTML = `
             <div class="modal_one_line">
-            <div class="modal_checkbox"><input id="is_save" type="checkbox" checked>
-            <p>是否保存本页：</p></div>
-            <div class="modal_checkbox"><input id="is_read" type="checkbox" checked>
-            <p>是否播放语音：</p></div>
-            <div class="modal_checkbox"><input id="is_transform" type="checkbox" checked>
-            <p>是否转换繁体：</p></div>
+            <div class="modal_checkbox"><input id="is_save" type="checkbox" checked><p>保存本页：</p></div>
+            <div class="modal_checkbox"><input id="is_read" type="checkbox" checked><p>播放语音：</p></div>
+            <div class="modal_checkbox"><input id="is_transform" type="checkbox" checked><p>转换繁体：</p></div>
+            <div class="modal_checkbox"><input id="is_pinyin" type="checkbox" checked><p>替换拼音：</p></div>
             </div>
             <div class="modal_one_line">
             <button id="novel_copy" class="btn">复制全文</button>
@@ -518,10 +551,7 @@
         document.body.appendChild(overlay);
         // 禁止页面滚动
         document.body.style.overflow = "hidden";
-        // review checkbox
-        document.getElementById("is_save").checked = getIsSave();
-        document.getElementById("is_read").checked = getIsRead();
-        document.getElementById("is_transform").checked = getIsTransform();
+        reviewSetting();
 
         overlay.addEventListener("click", (e) => {
             // 点击遮罩层关闭（但点到弹窗内容时不关闭）
@@ -534,23 +564,26 @@
             }
             // 翻页按钮是否保存本页
             if (e.target === document.getElementById("is_save")) {
-                localStorage.setItem("Novel-Copy-Is_save", e.target.checked);
-                Is_save = e.target.checked;
+                operateLocalStorage("Is_save", e.target.checked);
+                addBtn();
             }
             // 翻页按钮是否播放语音
             if (e.target === document.getElementById("is_read")) {
-                localStorage.setItem("Novel-Copy-Is_read", e.target.checked);
-                Is_read = e.target.checked;
+                operateLocalStorage("Is_read", e.target.checked);
             }
             // 翻页按钮是否转换繁体
             if (e.target === document.getElementById("is_transform")) {
-                localStorage.setItem("Novel-Copy-Is_transform", e.target.checked);
-                Is_transform = e.target.checked;
+                operateLocalStorage("Is_transform", e.target.checked);
+                init();
+            }
+            // 替换拼音
+            if (e.target === document.getElementById("is_pinyin")) {
+                operateLocalStorage("Is_pinyin", e.target.checked);
                 init();
             }
             // 复制全文
             if (e.target === document.getElementById("novel_copy")) {
-                let novel = localStorage.getItem("Novel-Copy-novel_content");
+                let novel = getLocalStorage("novel_content");
                 if (novel) {
                     if (window.location.protocol === "https:") {
                         navigator.clipboard
@@ -587,23 +620,23 @@
             }
             // 重置设置
             if (e.target === document.getElementById("modal_reset_btn")) {
-                localStorage.removeItem("Novel-Copy-Is_save");
-                localStorage.removeItem("Novel-Copy-Is_transform");
+                resetSetting();
             }
         });
     }
 
     function clearStorage() {
-        localStorage.removeItem("Novel-Copy-novel_content");
+        operateLocalStorage("novel_content");
         document.getElementById("btn_clear_novel").innerText = "n";
     }
 
     /**
-     * 初始化页面
+     * 初始化页面，图标转换
+     * 根据设置是否转换繁体/简体中文，是否替换拼音，是否播放语音，是否保存本页
      */
     function init() {
         // 文本简体/繁体中文转换
-        if (Is_transform) {
+        if (getLocalStorage("Is_transform")) {
             // 图标转换为中文，繁转简
             if (checkout() == 21) {
                 icon_to_word($("#pt-pop")[0], piaotianIconObj, 'i', 'className', ['icon-']);
@@ -616,6 +649,16 @@
         // 图标转换为文字
         if (checkout() == 23) {
             icon_to_word($("#chapter-content")[0], shiziksIconObj, 'img', 'src', [window.location.origin + '/asset/fonts/', '.png']);
+            // 替换拼音
+            if (getLocalStorage("Is_pinyin")) {
+                $("#chapter-content")[0].innerHTML = replacePinyinAbbreviations($("#chapter-content")[0].innerHTML);
+            }
+        }
+        // 替换拼音
+        if (getLocalStorage("Is_pinyin")) {
+            document.querySelectorAll("p").forEach((e) => {
+                e.innerText = replacePinyinAbbreviations(e.innerText);
+            });
         }
     }
 
@@ -629,7 +672,7 @@
         if (Is_over) {
             turnPage(checkout());
         } else {
-            showNotification("loading", 3000, Is_read);
+            showNotification("loading", 3000, getLocalStorage("Is_read"));
         }
     }
 
@@ -840,7 +883,7 @@
                     if (i > 0) {
                         str = str + "\n\n" + "    " + p;
                     } else {
-                        let con = localStorage.getItem("Novel-Copy-novel_content");
+                        let con = getLocalStorage("novel_content");
                         if (con) {
                             con = con.trim();
                             if (!con.slice(con.length - p.length, con.length).includes(p)) {
@@ -859,7 +902,7 @@
                 b = $("#nr1")[0].innerText.replace("    ", "\n   ").replace("由于不可抗拒原因，打不开请访问最新网址m.2shuqu.com", "").replace("【本章阅读完毕，; 】", "").replace(/^/gm, "　　");
                 str = " _目录_  【 " + a.trim() + " 】" + b;
 
-                let con = localStorage.getItem("Novel-Copy-novel_content");
+                let con = getLocalStorage("novel_content");
                 if (con) {
                     con = con.trim();
                     if (con.includes(a.trim())) {
@@ -1054,7 +1097,7 @@
                     b = b.slice(0, len);
                 }
                 b = b.replaceAll("如果出现文字缺失，格式混乱请取消转码/退出阅读模式", "").replaceAll("【收藏石子看书,防止丢失阅读进度】", "").replaceAll("泡泡听书，立即畅听，欲罢不能！", "").replaceAll("内容未完，下一页继续阅读", "");
-                let novel = localStorage.getItem("Novel-Copy-novel_content");
+                let novel = getLocalStorage("novel_content");
                 if (novel && novel.includes(a.trim())) {
                     str = "\n" + b;
                 } else {
@@ -1115,8 +1158,8 @@
         transfer.blur();
         if (Is_over) {
             let novel_content = "";
-            if (localStorage.getItem("Novel-Copy-novel_content")) {
-                novel_content = localStorage.getItem("Novel-Copy-novel_content");
+            if (getLocalStorage("novel_content")) {
+                novel_content = getLocalStorage("novel_content");
             } else {
                 novel_content = '　　';
             }
@@ -1136,10 +1179,10 @@
             }
 
             if (judgeRepeat(testStr)) {
-                showNotification("翻页成功", 1500, Is_read);
+                showNotification("翻页成功", 1500, getLocalStorage("Is_read"));
             } else {
-                localStorage.setItem("Novel-Copy-novel_content", testStr);
-                showNotification("复制成功", 1500, Is_read);
+                operateLocalStorage("novel_content", testStr);
+                showNotification("复制成功", 1500, getLocalStorage("Is_read"));
             }
         }
 
@@ -1230,7 +1273,7 @@
                 if ($(".pageLink")[0] && $(".pageLink")[0].innerText.includes("尾页")) {
                     $(".pageLink a")[$(".pageLink a").length - 2].click();
                 } else {
-                    showNotification("全文结束!", 1500, Is_read);
+                    showNotification("全文结束!", 1500, getLocalStorage("Is_read"));
                 }
                 break;
             case 10:
@@ -1270,11 +1313,14 @@
                 break;
             case 19: // jcxs
                 $(".pereview a")[2].click();
+                break;
             case 20: // 256wx
                 len = $(".page a").length;
                 $(".page a")[len - 2].click();
+                break;
             case 21: // piaotian
                 $(".pt-nextchapter a")[0].click();
+                break;
             case 22: // tuoverse
                 if ($(".nav-buttons a")[0]) {
                     len = document.querySelectorAll(".nav-buttons a").length;
@@ -1286,8 +1332,10 @@
                     window.location.href = url.slice(url.indexOf('https'), url.indexOf('-') + 1) + (Number(num) + 1) + '.html';
                     return;
                 }
+                break;
             case 23: // shiziks
                 $("#next")[0].click();
+                break;
 
             // case 9:
             //   break;
@@ -1334,7 +1382,7 @@
      * @returns {boolean} 是否重复
      */
     function judgeRepeat(text = "") {
-        let con = localStorage.getItem("Novel-Copy-novel_content");
+        let con = getLocalStorage("novel_content");
         if (con) {
             con = con.trim();
         }
@@ -1611,8 +1659,7 @@
    * transformContent('並乾', true, ['並 : 并', '乾 : 干'])
    * @returns '并干'
    */
-    function transformContent(content = ' : ', transform = true, dict = DICT) {
-        const DictStyle = ' : ';
+    function transformContent(content = '', transform = true, dict = DICT) {
         if (typeof dict == 'string') {
             dict = dict.split('\n');
         }
@@ -1633,8 +1680,7 @@
     }
 
     // 修复错字
-    function transformContentFix(content = ' : ', icon = '') {
-        const DictStyle = ' : ';
+    function transformContentFix(content = '', icon = '') {
         let arr = [
             '干坤 : 乾坤',
             '衣菱 : 衣领',
@@ -1645,6 +1691,17 @@
             arr.push('沈 : 沉', 'xue : 穴');  // , ' : '
         }
         arr.map((el) => {
+            content = content.replaceAll(el.split(DictStyle)[0], el.split(DictStyle)[1]);
+        })
+        return content;
+    }
+
+    // 替换拼音缩写  
+    function replacePinyinAbbreviations(content = '') {
+        let arr = [
+            'nv : 女', '将si : 将死', 'si心 : 死心', 'sisi : 死死', 'g嘛 : 干嘛', 'g净 : 干净', 'gg净净 : 干干净净', 'g脆 : 干脆', '口g舌燥 : 口干舌燥', 'hanzhu : 含住'
+        ];
+        arr.filter(item => item !== ' : ').map((el) => {
             content = content.replaceAll(el.split(DictStyle)[0], el.split(DictStyle)[1]);
         })
         return content;
@@ -1680,7 +1737,7 @@
 
         console.log('文本内容:\n\n', contentHtml.innerText);
         // 文本简体/繁体中文转换
-        if (Is_transform) {
+        if (getLocalStorage("Is_transform")) {
             contentHtml.innerHTML = transformContent(contentHtml.innerHTML);
         }
 
@@ -1704,6 +1761,8 @@
         return `<b icon="${key}" style="border-bottom: 3px solid #ffff00a1;">${val}</b>`;
     }
 
+    // 字典样式
+    const DictStyle = ' : ';
     // 图标图片
     const IconImg = '✨';
 
